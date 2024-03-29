@@ -14,6 +14,8 @@
 // purpose.
 // -------------------------------------------
 
+#include <GL/freeglut_std.h>
+#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -27,6 +29,12 @@
 #include <float.h>
 #include "src/Vec3.h"
 #include "src/Camera.h"
+
+int getIndice(int i, int j, int nW, int nH){
+    i=std::min(std::max(i,0),nH-1);//pour gérè les côté de l'image 
+    j=std::min(std::max(j,0),nW-1);
+    return i*nW+j;
+}
 
 enum DisplayMode{ WIRE=0, SOLID=1, LIGHTED_WIRE=2, LIGHTED=3 };
 
@@ -62,10 +70,12 @@ Mesh mesh;
 
 //Mesh to generate
 Mesh unit_sphere;
+Mesh unit_cone;
 
 bool display_normals;
 bool display_loaded_mesh;
 bool display_unit_sphere;
+bool display_unit_cone;
 DisplayMode displayMode;
 
 // -------------------------------------------
@@ -81,12 +91,106 @@ static bool mouseMovePressed = false;
 static bool mouseZoomPressed = false;
 static int lastX=0, lastY=0, lastZoom=0;
 static bool fullScreen = false;
+static int nX=20;
+static int nY=20;
+
+
 
 //To complete
-void setUnitSphere( Mesh & o_mesh, int nX=20, int nY=20 )
+void setUnitSphere( Mesh & o_mesh, int nX, int nY)
 {
+o_mesh.vertices.clear();
+o_mesh.normals.clear();
+o_mesh.triangles.clear();
+for(int i=0;i<nX;++i){
+    for(int j=0;j<nY;++j){
+        float theta= 2.0f*M_PI*(float(i)/(nX-1));//(2*M_PI*i/nX);
+        float phi= M_PI*((float(j)/(nY-1))-0.5f);//(M_PI * j / nY-M_PI_2);
+        float x = cos(theta)*cos(phi);
+        float y = sin(theta)*cos(phi);
+        float z = sin(phi);
+
+        Vec3 ve(x,y,z);
+        o_mesh.vertices.push_back(ve);
+        o_mesh.normals.push_back(ve);
+
+        if(i>=nX-1 || j>=nY-1){
+            continue;
+        }
+
+        int i0 = getIndice(i, j, nY, nX);
+        int i1 = getIndice((1 + i) % nX, j, nY, nX);
+        int i2 = getIndice((1 + i) % nX, (j + 1) % nY, nY, nX);
+        int i3 = getIndice(i, (j + 1) % nY, nY, nX);
+        o_mesh.triangles.push_back(Triangle(i0, i1, i2));
+        o_mesh.triangles.push_back(Triangle(i0, i2, i3));
+    }
+}
+/*
+for(unsigned long i=0; i<o_mesh.vertices.size()-nX-1;++i){
+    o_mesh.triangles.push_back(Triangle (i,i+nX,i+nX+1));
+    o_mesh.triangles.push_back(Triangle (i,i+nX+1,i+1));
+}*/
 
 
+
+}
+
+void setUnitCone( Mesh & o_mesh, int nX, int nY){
+    o_mesh.vertices.clear();
+    o_mesh.normals.clear();
+    o_mesh.triangles.clear();
+
+
+
+    for(int i=0;i<nX;i++){ //tracer un cercle
+        for(int j=0;j<nY;++j){
+            float theta= 2.0f*M_PI*(float(i)/(nX-1));
+            float phi= M_PI*((float(j)/(nY-1))-0.5f);
+            float x = cos(theta)*cos(phi);
+            float y = sin(theta)*cos(phi);
+            float z = 0;
+
+            Vec3 ve(x,y,z);
+            o_mesh.vertices.push_back(ve);
+            o_mesh.normals.push_back(ve);
+
+
+
+            int i0 = getIndice(i, j, nY, nX);
+            int i1 = getIndice((1 + i), j, nY, nX);
+
+            o_mesh.triangles.push_back(Triangle(i0, i1, o_mesh.vertices.size()-1));
+
+        }
+    }
+    Vec3 sommet(0,0,1);
+    o_mesh.vertices.push_back(sommet);
+    o_mesh.normals.push_back(sommet);
+    for(int i=0;i<nX;i++){ //tracer un cercle
+        for(int j=0;j<nY;++j){
+
+            int i0 = getIndice(i, j, nY, nX);
+            int i1 = getIndice((1 + i), j, nY, nX);
+
+            o_mesh.triangles.push_back(Triangle(i0, i1, o_mesh.vertices.size()-1));
+
+        }
+    }
+}
+
+
+void modifieUnitSphere(char caract, int n){
+    if(caract=='-'){
+        nY=nY-1;
+        nX=nX-1;
+    }
+    if(caract=='+'){
+        nY=nY+1;
+        nX=nX+1;
+    }
+    setUnitSphere(unit_sphere,nX,nY);
+    glutPostRedisplay();
 }
 
 
@@ -226,6 +330,7 @@ void init () {
     displayMode = LIGHTED;
     display_normals = false;
     display_unit_sphere = false;
+    display_unit_cone = false;
     display_loaded_mesh = true;
 
     glLineWidth(1.);
@@ -339,6 +444,11 @@ void draw () {
         drawTriangleMesh(unit_sphere);
     }
 
+    if( display_unit_cone ){
+        glColor3f(0.8,1,0.8);
+        drawTriangleMesh(unit_cone);
+    }
+
     if( display_loaded_mesh ){
         glColor3f(0.8,0.8,1);
         drawTriangleMesh(mesh);
@@ -353,6 +463,8 @@ void draw () {
         glColor3f(0.,0.,0.);
         if( display_unit_sphere )
             drawTriangleMesh(unit_sphere);
+        if( display_unit_cone )
+            drawTriangleMesh(unit_cone);
 
         if( display_loaded_mesh )
             drawTriangleMesh(mesh);
@@ -419,6 +531,15 @@ void key (unsigned char keyPressed, int x, int y) {
         display_unit_sphere = !display_unit_sphere;
         break;
 
+    case '3': //Toggle unit sphere mesh display
+        display_unit_cone = !display_unit_cone;
+        break;
+    case '+':
+        modifieUnitSphere('+', 1);
+        break;
+    case '-':
+        modifieUnitSphere('-',1);
+        break;
     default:
         break;
     }
@@ -486,6 +607,7 @@ int main (int argc, char ** argv) {
     window = glutCreateWindow ("TP HAI714I");
 
     init ();
+    //gestion des évènements
     glutIdleFunc (idle);
     glutDisplayFunc (display);
     glutKeyboardFunc (key);
@@ -500,7 +622,9 @@ int main (int argc, char ** argv) {
     //Uncomment to see other meshes
     //openOFF("data/elephant_n.off", mesh.vertices, mesh.normals, mesh.triangles);
 
-    setUnitSphere( unit_sphere );
+    //a nous d'implémenter unit_sphere
+    setUnitSphere( unit_sphere,nX,nY );
+    setUnitCone(unit_cone, nX, nY);
 
     glutMainLoop ();
     return EXIT_SUCCESS;
