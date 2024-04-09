@@ -140,7 +140,7 @@ void setUnitCone( Mesh & o_mesh, int nX, int nY){
     o_mesh.vertices.clear();
     o_mesh.normals.clear();
     o_mesh.triangles.clear();
-
+    printf("cone\n");
 
 
     for(int i=0;i<nX;i++){ //tracer un cercle
@@ -161,6 +161,16 @@ void setUnitCone( Mesh & o_mesh, int nX, int nY){
             int i1 = getIndice((1 + i), j, nY, nX);
 
             o_mesh.triangles.push_back(Triangle(i0, i1, o_mesh.vertices.size()-1));
+
+        }
+    }
+    for(int i=0;i<nX;i++){ //remplire le cercle
+        for(int j=0;j<nY;++j){
+
+            int i0 = getIndice(i, j, nY, nX);
+            int i1 = getIndice((1 + i), j, nY, nX);
+
+            o_mesh.triangles.push_back(Triangle(i1, i0, o_mesh.vertices.size()-1));
 
         }
     }
