@@ -71,10 +71,12 @@ Mesh mesh;
 //Mesh to generate
 Mesh unit_sphere;
 Mesh unit_cone;
+Mesh unit_cylindre;
 
 bool display_normals;
 bool display_loaded_mesh;
 bool display_unit_sphere;
+bool display_unit_cylindre;
 bool display_unit_cone;
 DisplayMode displayMode;
 
@@ -187,6 +189,62 @@ void setUnitCone( Mesh & o_mesh, int nX, int nY){
 
         }
     }
+}
+
+void setCylinder(Mesh& o_mesh, float r, float h, int n) {
+    o_mesh.vertices.clear(); // vide le tableau de sommets
+    o_mesh.normals.clear(); // vide le tableau de normales
+    o_mesh.triangles.clear(); // vide le tableau de triangles
+
+    // créé un cylindre de rayon r, de hauteur h, et de n côtés (méridient)
+    float angle = 2 * M_PI / n;
+
+    // créé les sommets pour les cercles du haut et du bas
+    for (int i = 0; i < n; ++i) {
+        float x = r * cos(i * angle);
+        float y = r * sin(i * angle);
+        o_mesh.vertices.push_back(Vec3(x, y, h / 2));
+        o_mesh.vertices.push_back(Vec3(x, y, -h / 2));
+        o_mesh.normals.push_back(Vec3(x, y, 0));
+        o_mesh.normals.push_back(Vec3(x, y, 0));
+    }
+
+    // créé les sommets pour les côtés du cylindre
+    for (int i = 0; i < n; ++i) {
+        float x1 = r * cos(i * angle); // sommet du cercle du haut
+        float y1 = r * sin(i * angle); // sommet du cercle du haut
+        float x2 = r * cos((i + 1) * angle); // sommet du cercle du bas
+        float y2 = r * sin((i + 1) * angle); // sommet du cercle du bas
+
+        o_mesh.vertices.push_back(Vec3(x1, y1, h / 2)); // sommet du cercle du haut
+        o_mesh.vertices.push_back(Vec3(x1, y1, -h / 2)); // sommet du cercle du bas
+        o_mesh.vertices.push_back(Vec3(x2, y2, h / 2)); // sommet du cercle du haut
+        o_mesh.vertices.push_back(Vec3(x2, y2, -h / 2)); // sommet du cercle du bas
+
+        Vec3 normal1 = Vec3(x1, y1, 0);
+        Vec3 normal2 = Vec3(x2, y2, 0);
+
+        o_mesh.normals.push_back(normal1);
+        o_mesh.normals.push_back(normal1);
+        o_mesh.normals.push_back(normal2);
+        o_mesh.normals.push_back(normal2);
+    }
+
+    // créé les triangles pour les cercles du haut et du bas
+    for (int i = 0; i < n - 2; ++i) {
+        o_mesh.triangles.push_back(Triangle(0, 2 * i + 2, 2 * i + 4));
+        o_mesh.triangles.push_back(Triangle(1, 2 * i + 3, 2 * i + 1));
+    }
+
+    // créé les triangles pour les côtés du cylindre
+    for (int i = 0; i < n - 1; ++i) {
+        o_mesh.triangles.push_back(Triangle(2 * i + 2, 2 * i + 3, 2 * i + 4));
+        o_mesh.triangles.push_back(Triangle(2 * i + 3, 2 * i + 5, 2 * i + 4));
+    }
+
+    // rejoin les deux derniers sommets pour fermer le cylindre
+    o_mesh.triangles.push_back(Triangle(2 * n, 2 * n + 1, 2));
+    o_mesh.triangles.push_back(Triangle(2 * n + 1, 3, 2));
 }
 
 
@@ -340,8 +398,9 @@ void init () {
     displayMode = LIGHTED;
     display_normals = false;
     display_unit_sphere = false;
+    display_unit_cylindre = true;
     display_unit_cone = false;
-    display_loaded_mesh = true;
+    display_loaded_mesh = false;
 
     glLineWidth(1.);
     glPointSize(4.);
@@ -454,6 +513,11 @@ void draw () {
         drawTriangleMesh(unit_sphere);
     }
 
+    if(display_unit_cylindre){
+        glColor3f(0.8,1,0.8);
+        drawTriangleMesh(unit_cylindre);
+    }
+
     if( display_unit_cone ){
         glColor3f(0.8,1,0.8);
         drawTriangleMesh(unit_cone);
@@ -473,6 +537,8 @@ void draw () {
         glColor3f(0.,0.,0.);
         if( display_unit_sphere )
             drawTriangleMesh(unit_sphere);
+        if(display_unit_cylindre)
+            drawTriangleMesh(unit_cylindre);
         if( display_unit_cone )
             drawTriangleMesh(unit_cone);
 
@@ -543,6 +609,9 @@ void key (unsigned char keyPressed, int x, int y) {
 
     case '3': //Toggle unit sphere mesh display
         display_unit_cone = !display_unit_cone;
+        break;
+    case '4': //Toggle unit sphere mesh display
+        display_unit_cylindre = !display_unit_cylindre;
         break;
     case '+':
         modifieUnitSphere('+', 1);
@@ -635,6 +704,7 @@ int main (int argc, char ** argv) {
     //a nous d'implémenter unit_sphere
     setUnitSphere( unit_sphere,nX,nY );
     setUnitCone(unit_cone, nX, nY);
+    setCylinder(unit_cylindre, 1, 1, nX);
 
     glutMainLoop ();
     return EXIT_SUCCESS;
