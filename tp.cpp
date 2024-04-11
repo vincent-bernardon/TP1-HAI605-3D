@@ -231,7 +231,7 @@ void setCylinder(Mesh& o_mesh, float r, float h, int n) {
     }
 
     // créé les triangles pour les cercles du haut et du bas
-    for (int i = 0; i < n - 2; ++i) {
+    for (int i = 0; i < n - 1; ++i) {
         o_mesh.triangles.push_back(Triangle(0, 2 * i + 2, 2 * i + 4));
         o_mesh.triangles.push_back(Triangle(1, 2 * i + 3, 2 * i + 1));
     }
